@@ -41,21 +41,30 @@ In the Supabase dashboard → Edge Functions → Secrets:
 
 Get your project URL and anon key from Supabase dashboard → Settings → API.
 
-**MCP Server** (Claude Code, Cursor, Windsurf):
-```
-See https://github.com/whiteport-collective/design-space-mcp
+**Python (recommended — zero dependencies):**
+```python
+from ds_client import DesignSpace
+ds = DesignSpace()
+ds.capture("Dark backgrounds work better for dashboards", category="successful_pattern")
+results = ds.search("dashboard patterns")
+ds.send_message("freya", "Review the landing page")
 ```
 
-**ChatGPT Custom GPT**:
-Use the OpenAPI spec in the MCP server repo.
+Copy `hooks/ds_client.py` into your project. No pip install needed.
 
-**Any HTTP client**:
+**Any HTTP client (curl, fetch, urllib):**
 ```bash
 curl -X POST https://YOUR-PROJECT-REF.supabase.co/functions/v1/capture-design-space \
   -H "Authorization: Bearer YOUR-ANON-KEY" \
   -H "Content-Type: application/json" \
   -d '{"content": "Dark backgrounds with light text work better for dashboards", "category": "successful_pattern"}'
 ```
+
+**MCP Server (extended — for IDE tool integration):**
+```
+See https://github.com/whiteport-collective/design-space-mcp
+```
+MCP gives agents interactive tools in the IDE, but requires server setup and is less portable. Start with HTTP, add MCP when you need it.
 
 ## Architecture
 
