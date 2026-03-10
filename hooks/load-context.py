@@ -47,6 +47,33 @@ def load_context():
     if not results:
         return
 
+    # Load rejections / taste constraints
+    rej_payload = json.dumps({
+        "query": "REJECTION constraint taste preference",
+        "category": "client_feedback",
+        "limit": 50,
+        "threshold": 0.2
+    }).encode("utf-8")
+
+    rej_req = urllib.request.Request(
+        f"{SUPABASE_URL}/functions/v1/search-design-space",
+        data=rej_payload,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {SUPABASE_KEY}"
+        },
+        method="POST"
+    )
+
+    rejections = []
+    try:
+        with urllib.request.urlopen(rej_req, timeout=5) as resp:
+            rej_data = json.loads(resp.read())
+            rejections = [r for r in rej_data.get("results", [])
+                         if r.get("content", "").startswith("REJECTION:")]
+    except Exception:
+        pass
+
     # Also check for unread messages
     msg_payload = json.dumps({
         "action": "check",
@@ -74,11 +101,24 @@ def load_context():
         pass
 
     # Output context for the agent
+    has_content = results or rejections or messages
+    if not has_content:
+        return
+
     print("\n--- DESIGN SPACE CONTEXT (auto-loaded) ---")
-    print("Recent sessions:")
-    for r in results[:7]:
-        content = r.get("content", "")[:150]
-        print(f"  - {content}")
+
+    if rejections:
+        print(f"\nTaste constraints ({len(rejections)}) — ALWAYS respect these:")
+        for r in rejections:
+            # Strip "REJECTION: " prefix for cleaner output
+            content = r.get("content", "")[11:][:200]
+            print(f"  NO: {content}")
+
+    if results:
+        print("\nRecent sessions:")
+        for r in results[:7]:
+            content = r.get("content", "")[:150]
+            print(f"  - {content}")
 
     if messages:
         print(f"\nUnread messages ({len(messages)}):")
@@ -87,6 +127,8 @@ def load_context():
             from_agent = meta.get("from_agent", "unknown")
             print(f"  [{from_agent}]: {msg.get('content', '')[:120]}")
 
+    print("\nIf a user request conflicts with a taste constraint, ask:")
+    print("  'Design Space says [constraint]. Is this an exception, or should I follow it?'")
     print("---\n")
 
 
